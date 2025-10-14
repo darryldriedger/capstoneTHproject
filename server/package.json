@@ -2,6 +2,7 @@
   "name": "weather-server",
   "version": "0.0.1",
   "type": "module",
+  "engines": { "node": ">=18 <23" },
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
