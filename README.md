@@ -1,29 +1,95 @@
-# Weather on a Map (Starter)
+# 🌦️ Weather Lab 3D
+A full-stack JavaScript capstone project that visualizes real-time weather data in a stylized 3D environment.
 
-Minimal starter monorepo for a full‑stack JS capstone:
-- Client: React (Vite) + simple CSS + MapLibre-ready
-- Server: Express + Mongoose
-- DB: MongoDB Atlas
-- APIs: Open‑Meteo (forecast) + OpenCage or Nominatim (geocode)
+Built with 
+**React (Vite)**, **Three.js / @react-three/fiber**, **Express**, and **MongoDB Atlas** 
+— deployed via **Vercel** and **Render**.
 
-## Quickstart
+---
 
+## 🚀 Overview
+
+**Weather Lab 3D** lets users:
+- Search any city to view a 3D weather visualization.
+- Retrieve current and daily forecasts using the **Open-Meteo API**.
+- Automatically geocode place names to coordinates via the **OpenCage Geocoding API** (or **Nominatim** fallback).
+- Save favorite locations to a MongoDB collection for quick access.
+- Explore the app’s futuristic 3D interface, built with Three.js and @react-three/drei.
+
+---
+
+## 🧠 Tech Stack
+
+**Frontend**
+- React + Vite
+- Three.js / @react-three/fiber / @react-three/drei
+- Modern ES2023 JavaScript and functional components
+
+**Backend**
+- Node.js / Express
+- MongoDB (via Mongoose)
+- RESTful endpoints
+
+**APIs**
+1. 🌐 [Open-Meteo](https://open-meteo.com) — weather forecast data  
+2. 📍 [OpenCage Geocoding](https://opencagedata.com) (fallback: [Nominatim](https://nominatim.org)) — geocoding
+
+---
+
+## ⚙️ Local Setup
+
+### Prerequisites
+- Node.js v20+
+- MongoDB Atlas (or local MongoDB)
+- OpenCage API key (optional, for higher accuracy)
+
+### 1️⃣ Clone the project
 ```bash
+git clone https://github.com/darryldriedger/capstoneTHproject.git
+cd capstoneTHproject
+
+### 2️⃣ Install dependencies
 npm install
-npm --prefix server install
 npm --prefix client install
+npm --prefix server install
 
-# copy envs
-cp .env.example server/.env
-cp .env.example client/.env
+### 3️⃣ Configure environment
+Create a .env file in server/:
+MONGO_URI=your_mongo_connection_string
 
-# set values in server/.env (MONGO_URI at least)
+4️⃣ Run locally
 npm run dev
-```
 
-Client: http://localhost:5173  
-Server: http://localhost:8080
+Client runs at http://localhost:5173
+Server runs at http://localhost:8081
 
-## Deploy (high level)
-- API → Render (add envs: MONGO_URI, OPENCAGE_API_KEY, PORT from Render)
-- Client → Vercel (envs: VITE_SERVER_URL, VITE_MAPTILER_KEY)
+
+✨ Features
+
+Responsive 3D UI with floating text and fog effects
+
+Interactive weather panels and search interface
+
+Saved locations persisted to MongoDB
+
+Optional neon glow + environmental lighting
+
+Error handling for missing or invalid locations
+
+🧩 Extra Credit (for “Exceeds Expectations”)
+
+✔️ More than two APIs (OpenCage + Nominatim + Open-Meteo)
+
+✔️ Custom CSS and 3D UI styling beyond any framework defaults
+
+✔️ HTML5 validation on all input forms
+
+🧭 Credits
+
+Weather Data: Open-Meteo
+
+Geocoding: OpenCage / Nominatim
+
+3D Scene: Three.js
+
+Deployment: Vercel + Render
