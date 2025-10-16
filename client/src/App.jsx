@@ -1,113 +1,100 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { searchCity, getForecast, listLocations, saveLocation, deleteLocation } from './lib/api.js'
+// client/src/App.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import ThreeWeather from "./three/ThreeWeather";
 
-const uuid = () => crypto.randomUUID()
+const API = import.meta.env.VITE_SERVER_URL ?? ""; // e.g. http://localhost:8081
 
-export default function App(){
-  const [q, setQ] = useState('Calgary')
-  const [coords, setCoords] = useState(null)
-  const [forecast, setForecast] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [userId, setUserId] = useState(localStorage.getItem('woam_user') || '')
-  const [saved, setSaved] = useState([])
+function getOrCreateUserId() {
+  const k = "userId";
+  let v = localStorage.getItem(k);
+  if (!v) {
+    v = crypto.randomUUID();
+    localStorage.setItem(k, v);
+  }
+  return v;
+}
 
+export default function App() {
+  const userId = useMemo(getOrCreateUserId, []);
+  const [q, setQ] = useState("Calgary");
+  const [place, setPlace] = useState(null);        // { name, lat, lon }
+  const [forecast, setForecast] = useState(null);  // { place, data }
+  const [saved, setSaved] = useState([]);          // [{ _id, name, lat, lon }]
+
+  // Load saved locations on mount
   useEffect(() => {
-    if(!userId){ const id = uuid(); localStorage.setItem('woam_user', id); setUserId(id) }
-  }, [])
-
-  // load saved
-  useEffect(() => {
-    if(userId){
-      listLocations(userId).then(setSaved).catch(()=>{})
-    }
-  }, [userId])
-
-  async function onSearch(e){
-    e.preventDefault()
-    setLoading(true)
-    setForecast(null)
-    try{
-      const place = await searchCity(q)
-      if(place){
-        setCoords(place)
-        const data = await getForecast(place.lat, place.lon)
-        setForecast({ place, data })
-      } else {
-        alert('No results. Try another query.')
+    (async () => {
+      try {
+        const res = await fetch(`${API}/api/locations?userId=${userId}`);
+        const data = await res.json();
+        setSaved(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.warn("Failed to load saved locations", e);
       }
-    } finally { setLoading(false) }
+    })();
+  }, [userId]);
+
+  // --- handlers -------------------------------------------------------------
+
+  async function handleSearchSubmit(e) {
+    e?.preventDefault?.();
+    try {
+      // 1) geocode the query -> place
+      const geo = await fetch(`${API}/api/geocode?q=${encodeURIComponent(q)}`);
+      const g = await geo.json();
+      if (!g || !g.lat || !g.lon) return;
+
+      const nextPlace = { name: g.name ?? q, lat: g.lat, lon: g.lon };
+      setPlace(nextPlace);
+
+      // 2) fetch forecast for that place
+      const fx = await fetch(`${API}/api/forecast?lat=${g.lat}&lon=${g.lon}`);
+      const data = await fx.json();
+
+      setForecast({ place: nextPlace, data });
+    } catch (err) {
+      console.error("Search failed:", err);
+    }
   }
 
-  async function onSave(){
-    if(!coords || !userId) return
-    const item = await saveLocation({ userId, name: coords.name, lat: coords.lat, lon: coords.lon })
-    setSaved(prev => [item, ...prev])
+  async function handleSave() {
+    try {
+      if (!place) return;
+      const res = await fetch(`${API}/api/locations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, name: place.name, lat: place.lat, lon: place.lon }),
+      });
+      const doc = await res.json();
+      if (doc && doc._id) setSaved((prev) => [doc, ...prev]);
+    } catch (err) {
+      console.error("Save failed:", err);
+    }
   }
 
-  async function onDelete(id){
-    await deleteLocation(id, userId)
-    setSaved(prev => prev.filter(x => x._id !== id))
+  async function handleDelete(id) {
+    try {
+      await fetch(`${API}/api/locations/${id}`, { method: "DELETE" });
+      setSaved((prev) => prev.filter((s) => s._id !== id));
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
   }
+
+  // -------------------------------------------------------------------------
 
   return (
-    <div>
-      <header>
-        <strong>Weather on a Map</strong>
-        <form onSubmit={onSearch} className="row">
-          <input type="text" value={q} onChange={e=>setQ(e.target.value)}
-                 placeholder="Search city..." required minLength={2} />
-          <button>Search</button>
-        </form>
-        <span className="badge">User: {userId.slice(0,8)}</span>
-      </header>
-
-      <div className="container grid">
-        <section className="card">
-          <h3>Forecast</h3>
-          {!forecast && !loading && <p className="muted">Search a city to see the forecast.</p>}
-          {loading && <p>Loading...</p>}
-          {forecast && (
-            <div>
-              <div className="row" style={{justifyContent:'space-between'}}>
-                <div>
-                  <h4 style={{margin:'6px 0'}}>{forecast.place.name}</h4>
-                  <div className="muted">{forecast.place.lat.toFixed(3)}, {forecast.place.lon.toFixed(3)}</div>
-                </div>
-                <div className="row">
-                  <button onClick={onSave} className="secondary">Save location</button>
-                </div>
-              </div>
-              {forecast.data?.daily && (
-                <ul>
-                  {forecast.data.daily.time.map((d, i) => (
-                    <li key={d}>
-                      <strong>{d}</strong> — min {forecast.data.daily.temperature_2m_min[i]}°C,
-                      max {forecast.data.daily.temperature_2m_max[i]}°C,
-                      precip {forecast.data.daily.precipitation_sum[i]}mm
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </section>
-
-        <aside className="card">
-          <h3>Saved Locations</h3>
-          {saved.length === 0 ? <p className="muted">No saved locations yet.</p> : (
-            <ul>
-              {saved.map(loc => (
-                <li key={loc._id}>
-                  <div className="row" style={{justifyContent:'space-between'}}>
-                    <span>{loc.name} <span className="muted">({loc.lat.toFixed(2)}, {loc.lon.toFixed(2)})</span></span>
-                    <button className="secondary" onClick={()=>onDelete(loc._id)}>Delete</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </aside>
-      </div>
+    <div style={{ width: "100vw", height: "100vh" }}>
+      <ThreeWeather
+        q={q}
+        setQ={setQ}
+        place={place}
+        forecast={forecast}
+        saved={saved}
+        onSearchSubmit={handleSearchSubmit}
+        onSave={handleSave}
+        onDelete={handleDelete}
+      />
     </div>
-  )
+  );
 }
